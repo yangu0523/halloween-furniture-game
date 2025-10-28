@@ -1,0 +1,2622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伊泽尔的万圣节扭蛋小屋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        /* 动画定义 */
+        @keyframes eggDrop {
+            0% { top: 0; transform: translateX(-50%) rotate(0deg); }
+            70% { top: 120px; transform: translateX(-50%) rotate(180deg); }
+            100% { top: 100px; transform: translateX(-50%) rotate(360deg); }
+        }
+
+        @keyframes eggOpen {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.1); }
+            100% { transform: translateX(-50%) scale(0); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes ghost-float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-10px) translateX(5px); }
+            50% { transform: translateY(-5px) translateX(-5px); }
+            75% { transform: translateY(-15px) translateX(3px); }
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.7)); }
+            50% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.9)); }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 扭蛋动画 */
+        #dropping-egg {
+            animation: eggDrop 1s ease-in-out forwards;
+        }
+
+        #dropping-egg.open {
+            animation: eggOpen 0.5s ease-in-out forwards;
+        }
+
+        /* 小屋样式 */
+        #room-container {
+            position: relative;
+            background-color: #f8f9fa;
+            border: 8px solid #4a5568;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .room-wall {
+            position: absolute;
+            background-color: #e2e8f0;
+            z-index: 1;
+        }
+        
+        .room-floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80%;
+            background-color: #f7fafc;
+            background-image: 
+                linear-gradient(rgba(100,100,100,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(100,100,100,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: 0;
+        }
+        
+        .room-window {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 60px;
+            background-color: #cbd5e0;
+            border: 4px solid #4a5568;
+            border-radius: 4px;
+            z-index: 2;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .room-window::before, .room-window::after {
+            content: '';
+            position: absolute;
+            background-color: #4a5568;
+        }
+        
+        .room-window::before {
+            width: 4px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .room-window::after {
+            width: 100%;
+            height: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .room-door {
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            width: 60px;
+            height: 100px;
+            background-color: #718096;
+            border: 4px solid #4a5568;
+            border-radius: 4px 4px 0 0;
+            z-index: 2;
+        }
+        
+        .room-door::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background-color: #a0aec0;
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .room-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #4a5568;
+            z-index: 2;
+        }
+        
+        .room-corner.top-left {
+            top: 0;
+            left: 0;
+            border-radius: 0 0 10px 0;
+        }
+        
+        .room-corner.top-right {
+            top: 0;
+            right: 0;
+            border-radius: 0 0 0 10px;
+        }
+        
+        /* 家具样式 */
+        .room-furniture {
+            position: absolute;
+            cursor: move;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            z-index: 5;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .room-furniture:hover {
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+        }
+        
+        .furniture-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* 绘制区域样式 */
+        #drawing-canvas {
+            border: 2px dashed #4a5568;
+            border-radius: 8px;
+            cursor: crosshair;
+            background-color: transparent;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tool-btn.active {
+            background-color: #4a5568;
+            color: white;
+        }
+
+        .pixel-preview {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+            margin-left: 10px;
+        }
+
+        /* 页面样式 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .nav-btn.active {
+            background-color: #4a5568;
+            color: white;
+        }
+        
+        .nav-btn:hover:not(.active) {
+            background-color: #e9ecef;
+        }
+
+        /* 按钮激活状态 */
+        button.active {
+            background-color: #4a5568;
+            color: white;
+        }
+
+        /* 音乐控制按钮 */
+        #music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 20px;
+            color: #4a5568;
+        }
+        
+        /* 稀有度特效 */
+        .rarity-rare {
+            animation: glow 3s infinite;
+        }
+        
+        .rarity-epic {
+            animation: glow 2s infinite;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
+        }
+        
+        .rarity-legendary {
+            animation: glow 1s infinite;
+            filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
+        }
+
+        /* 评分星星 */
+        .star {
+            color: #ffc107;
+            font-size: 24px;
+        }
+        
+        /* 贴纸样式 */
+        .sticker {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            z-index: 100;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            transition: transform 0.2s;
+            font-size: 2rem;
+        }
+
+        .sticker:hover {
+            transform: scale(1.05);
+        }
+        
+        /* 幽灵动画 */
+        .ghost {
+            position: absolute;
+            width: 50px;
+            height: 70px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50% 50% 10px 10px;
+            animation: ghost-float 10s infinite ease-in-out;
+            z-index: 10;
+        }
+        
+        .ghost::before, .ghost::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #4a5568;
+            border-radius: 50%;
+            top: 15px;
+        }
+        
+        .ghost::before { left: 10px; }
+        .ghost::after { right: 10px; }
+        
+        .ghost .mouth {
+            position: absolute;
+            width: 15px;
+            height: 5px;
+            background-color: #4a5568;
+            border-radius: 3px;
+            top: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        /* 小游戏样式 */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: white;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #game-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .game-option {
+            width: 250px;
+            height: 100px;
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .game-option:hover {
+            background-color: #e8eaf6;
+            transform: translateY(-5px);
+            border-color: #4a5568;
+        }
+
+        .game-icon {
+            font-size: 32px;
+        }
+
+        .game-info {
+            text-align: left;
+        }
+
+        .game-title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .game-reward {
+            font-size: 14px;
+            color: #666;
+        }
+
+        #game-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #4b5563;
+        }
+        
+        /* 抖动修正指示器 */
+        #stabilizer {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: rgba(255, 0, 0, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+        }
+        
+        /* 小游戏样式 */
+        .game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .game-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .game-description {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        #match-game {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 5px;
+            width: 300px;
+            height: 300px;
+        }
+        
+        .game-tile {
+            background-color: #e2e8f0;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .game-tile:hover {
+            background-color: #cbd5e0;
+        }
+        
+        #memory-game {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 10px;
+            width: 400px;
+            height: 400px;
+        }
+        
+        .memory-card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+        
+        .memory-card.flipped {
+            transform: rotateY(180deg);
+        }
+        
+        .memory-card .front,
+        .memory-card .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .memory-card .front {
+            background-color: #4a5568;
+            color: white;
+            transform: rotateY(180deg);
+        }
+        
+        .memory-card .back {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        #pumpkin-game {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            background-color: #f7fafc;
+            border: 2px solid #4a5568;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        #pumpkin-basket {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 30px;
+            background-color: #718096;
+            border-radius: 5px;
+        }
+        
+        .falling-pumpkin {
+            position: absolute;
+            top: -30px;
+            font-size: 24px;
+            animation-name: fall;
+            animation-timing-function: linear;
+        }
+        
+        @keyframes fall {
+            to { top: 100%; }
+        }
+        
+        .game-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .game-button {
+            padding: 8px 16px;
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .game-button:hover {
+            background-color: #2d3748;
+        }
+        
+        .game-result {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        #game-score {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #pumpkin-instruction {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        /* 图片上传样式 */
+        .upload-container {
+            max-w-2xl mx-auto mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-center;
+        }
+        
+        .upload-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+        
+        .upload-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #4a5568;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 10px;
+        }
+        
+        .upload-btn:hover {
+            background-color: #2d3748;
+        }
+        
+        #image-upload {
+            display: none;
+        }
+        
+        .upload-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .upload-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px auto;
+            display: none;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
+        .upload-actions {
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .upload-confirm {
+            padding: 6px 12px;
+            background-color: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .upload-cancel {
+            padding: 6px 12px;
+            background-color: #f56565;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            animation: bounceIn 0.5s;
+        }
+        
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .modal-confirm {
+            background-color: #48bb78;
+            color: white;
+            border: none;
+        }
+        
+        .modal-cancel {
+            background-color: #f56565;
+            color: white;
+            border: none;
+        }
+
+        /* 获得物品弹窗样式 */
+        .reward-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .reward-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: bounceIn 0.6s;
+        }
+        
+        .reward-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: float 3s infinite;
+        }
+        
+        .reward-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+        
+        .reward-name {
+            font-size: 20px;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .reward-description {
+            font-size: 14px;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .reward-close {
+            padding: 10px 20px;
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .reward-close:hover {
+            background-color: #2d3748;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans overflow-x-hidden">
+    <!-- 背景音乐 -->
+    <audio id="background-music" loop>
+        <source src="https://music.163.com/song/media/outer/url?id=2723079010.mp3" type="audio/mpeg">
+    </audio>
+    
+    <!-- 音乐控制按钮 -->
+    <div id="music-control" class="text-gray-700">
+        <i class="fa fa-music"></i>
+    </div>
+
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-sm fixed top-0 left-0 w-full z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa fa-pumpkin-o text-gray-700 text-2xl"></i>
+                <h1 class="text-xl font-bold">伊泽尔的万圣节扭蛋小屋</h1>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-1">
+                    <i class="fa fa-gift text-gray-700"></i>
+                    <span id="egg-count" class="font-medium">10</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <i class="fa fa-star-o text-gray-700"></i>
+                    <span id="furniture-count" class="font-medium">0/50</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <i class="fa fa-sticky-note text-gray-700"></i>
+                    <span id="sticker-count" class="font-medium">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 分页导航 -->
+        <div class="container mx-auto px-4 py-2 flex justify-center gap-2">
+            <button class="nav-btn active" data-page="gacha">扭蛋机</button>
+            <button class="nav-btn" data-page="drawing">绘制家具</button>
+            <button class="nav-btn" data-page="room">我的小屋</button>
+            <button class="nav-btn" data-page="stickers">贴纸装饰</button>
+            <button class="nav-btn" data-page="collection">家具收藏</button>
+            <button class="nav-btn" data-page="games">小游戏</button>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 pt-32 pb-16">
+        <!-- 1. 扭蛋机页面 -->
+        <section id="gacha" class="page active">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">万圣节扭蛋机</h2>
+                <p class="text-gray-500">消耗扭蛋，获取随机风格家具或贴纸</p>
+            </div>
+            
+            <!-- 扭蛋机容器 -->
+            <div class="relative w-64 h-96 mx-auto">
+                <!-- 扭蛋机主体 -->
+                <div class="w-full h-full bg-white border-4 border-gray-800 rounded-t-2xl relative overflow-hidden">
+                    <!-- 扭蛋机窗口 -->
+                    <div class="absolute top-8 left-1/2 -translate-x-1/2 w-48 h-48 bg-gray-100 border-2 border-gray-700 rounded-lg overflow-hidden">
+                        <div id="egg-container" class="w-full h-full flex items-center justify-center">
+                            <!-- 待扭蛋 -->
+                            <div id="waiting-egg" class="w-20 h-20 bg-gray-300 rounded-full border-2 border-gray-600 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition-colors">
+                                <i class="fa fa-paint-brush text-gray-700 text-2xl"></i>
+                            </div>
+                            <!-- 扭蛋掉落动画容器（默认隐藏） -->
+                            <div id="egg-drop-container" class="absolute inset-0 hidden">
+                                <div id="dropping-egg" class="w-20 h-20 bg-gray-300 rounded-full border-2 border-gray-600 absolute top-0 left-1/2 -translate-x-1/2"></div>
+                            </div>
+                            <!-- 结果展示容器（默认隐藏） -->
+                            <div id="result-show" class="absolute inset-0 hidden flex items-center justify-center">
+                                <div id="result-content" class="w-32 h-32 flex items-center justify-center"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 扭蛋机按钮 -->
+                    <div id="gacha-btn" class="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors">
+                        <i class="fa fa-refresh text-white text-2xl"></i>
+                    </div>
+                    <!-- 装饰元素 -->
+                    <div class="absolute top-4 right-4 w-8 h-8 animate-bounce">
+                        <i class="fa fa-bat text-gray-700 text-xl"></i>
+                    </div>
+                    <div class="absolute bottom-4 left-4 w-8 h-8">
+                        <i class="fa fa-spider-web text-gray-700 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 抽卡提示 -->
+            <div class="text-center mt-4 text-gray-500">
+                <p id="gacha-tip">点击按钮开始扭蛋，每次消耗1个扭蛋</p>
+            </div>
+        </section>
+
+        <!-- 2. 绘制区域页面 -->
+        <section id="drawing" class="page">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">创意绘制</h2>
+                <p class="text-gray-500">根据主题绘制你的家具，获得评分和奖励</p>
+            </div>
+            
+            <!-- 当前主题 -->
+            <div class="max-w-2xl mx-auto mb-6 p-4 bg-white rounded-lg shadow-sm">
+                <h3 class="text-lg font-semibold mb-2">当前绘制主题</h3>
+                <p id="drawing-theme" class="text-gray-700">请先抽取一个绘制主题</p>
+                <p id="drawing-desc" class="text-sm text-gray-500 mt-1"></p>
+            </div>
+            
+            <!-- 绘制工具 -->
+            <div class="max-w-2xl mx-auto mb-4">
+                <div class="flex justify-center gap-4 mb-4 flex-wrap">
+                    <div class="tool-btn active" data-tool="pen" title="像素画笔">
+                        <i class="fa fa-pencil"></i>
+                    </div>
+                    <div class="tool-btn" data-tool="bucket" title="油漆桶">
+                        <i class="fa fa-tint"></i>
+                    </div>
+                    <div class="tool-btn" data-tool="eraser" title="橡皮擦">
+                        <i class="fa fa-eraser"></i>
+                    </div>
+                    <div class="tool-btn" data-tool="shape" title="图形笔刷">
+                        <i class="fa fa-square"></i>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>粗细:</span>
+                        <input type="range" id="brush-size" min="1" max="10" value="1" class="w-24">
+                        <span id="brush-size-value">1px</span>
+                    </div>
+                    <input type="color" id="brush-color" value="#000000" class="w-10 h-10 rounded border">
+                    <div class="flex items-center">
+                        <span>颜色预览:</span>
+                        <div id="color-preview" class="pixel-preview" style="background-color: #000000;"></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>抖动修正:</span>
+                        <input type="range" id="stabilizer-level" min="0" max="10" value="3" class="w-24">
+                        <span id="stabilizer-value">3</span>
+                    </div>
+                    <button id="undo-btn" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors" title="撤回">
+                        <i class="fa fa-undo"></i>
+                    </button>
+                    <button id="clear-canvas" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+                        清空画布
+                    </button>
+                </div>
+                <!-- 图形选择 -->
+                <div id="shape-selector" class="flex justify-center gap-2 mb-4 hidden">
+                    <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50" data-shape="rectangle">矩形</button>
+                    <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50" data-shape="circle">圆形</button>
+                    <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50" data-shape="triangle">三角形</button>
+                    <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50" data-shape="star">星星</button>
+                </div>
+            </div>
+            
+            <!-- 绘制区域 -->
+            <div class="max-w-2xl mx-auto relative">
+                <canvas id="drawing-canvas" width="320" height="320"></canvas>
+                <div id="stabilizer"></div>
+            </div>
+            
+            <!-- 图片上传区域 -->
+            <div class="upload-container">
+                <h3 class="upload-title">不想绘制？可以直接上传家具图片</h3>
+                <label for="image-upload" class="upload-btn">
+                    <i class="fa fa-upload mr-1"></i>选择图片
+                </label>
+                <input type="file" id="image-upload" accept="image/jpeg, image/png, image/gif">
+                <p class="upload-info">支持JPG、PNG、GIF格式，大小不超过2MB，建议尺寸320x320像素</p>
+                
+                <img id="upload-preview" class="upload-preview" src="" alt="预览图">
+                
+                <div class="upload-actions" id="upload-actions">
+                    <button id="confirm-upload" class="upload-confirm">确认使用</button>
+                    <button id="cancel-upload" class="upload-cancel">取消</button>
+                </div>
+            </div>
+            
+            <!-- 提交按钮 -->
+            <div class="text-center mt-6">
+                <button id="submit-drawing" class="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    提交作品
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. 小屋区域页面 -->
+        <section id="room" class="page">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">我的小屋</h2>
+                <p class="text-gray-500">自由摆放家具，打造专属空间</p>
+            </div>
+            <!-- 小屋操作栏 -->
+            <div class="flex justify-center gap-4 mb-6 flex-wrap">
+                <button id="move-btn" class="px-4 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors active">
+                    <i class="fa fa-arrows mr-1"></i>移动
+                </button>
+                <button id="rotate-btn" class="px-4 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-repeat mr-1"></i>旋转
+                </button>
+                <button id="scale-btn" class="px-4 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-search-plus mr-1"></i>缩放
+                </button>
+                <button id="delete-btn" class="px-4 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-trash mr-1"></i>移除
+                </button>
+            </div>
+            <!-- 正方形小屋 -->
+            <div id="room-container" class="w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] mx-auto relative overflow-hidden">
+                <!-- 墙壁 -->
+                <div class="room-wall top-0 left-0 w-100% h-20%"></div>
+                
+                <!-- 地板 -->
+                <div class="room-floor"></div>
+                
+                <!-- 窗户 -->
+                <div class="room-window"></div>
+                
+                <!-- 门 -->
+                <div class="room-door"></div>
+                
+                <!-- 角落装饰 -->
+                <div class="room-corner top-left"></div>
+                <div class="room-corner top-right"></div>
+                
+                <!-- 家具摆放区域（动态生成家具） -->
+                <div id="furniture-container" class="w-full h-full"></div>
+            </div>
+            
+            <!-- 家具选择 -->
+            <div class="mt-8">
+                <h3 class="text-lg font-semibold mb-4 text-center">我的家具</h3>
+                <div id="furniture-selection" class="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
+                    <!-- 家具将在这里动态生成 -->
+                </div>
+                <div id="empty-furniture" class="text-center py-6 text-gray-500">
+                    <i class="fa fa-cube text-3xl mb-2"></i>
+                    <p>还没有家具，快去绘制吧！</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 贴纸装饰页面 -->
+        <section id="stickers" class="page">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">贴纸装饰</h2>
+                <p class="text-gray-500">使用贴纸装饰你的页面，拖动放置任意位置</p>
+            </div>
+            
+            <!-- 贴纸展示 -->
+            <div id="sticker-collection" class="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+                <!-- 贴纸将在这里动态生成 -->
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🎃">🎃</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="👻">👻</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🕷️">🕷️</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🦇">🦇</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🕸️">🕸️</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🍬">🍬</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🍭">🍭</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🧙">🧙</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🕯️">🕯️</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="☠️">☠️</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="💀">💀</div>
+                <div class="sticker-item bg-white rounded-lg p-3 text-center cursor-pointer hover:bg-gray-100 transition-colors" data-sticker="🔮">🔮</div>
+            </div>
+            
+            <!-- 贴纸使用说明 -->
+            <div class="max-w-2xl mx-auto text-center text-gray-500">
+                <p>点击贴纸选择，然后在页面上点击放置位置</p>
+                <p>已放置的贴纸可以拖动、缩放和删除</p>
+            </div>
+        </section>
+
+        <!-- 5. 家具收藏页面 -->
+        <section id="collection" class="page">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">家具收藏</h2>
+                <p class="text-gray-500">查看已收集的家具，聆听它们的故事</p>
+            </div>
+            <!-- 风格筛选 -->
+            <div class="flex justify-center gap-3 mb-6 flex-wrap">
+                <button class="px-3 py-1 bg-gray-700 text-white rounded filter-btn" data-filter="all">全部</button>
+                <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors filter-btn" data-filter="万圣节">万圣节</button>
+                <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors filter-btn" data-filter="森系">森系</button>
+                <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors filter-btn" data-filter="复古">复古</button>
+                <button class="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors filter-btn" data-filter="现代">现代</button>
+            </div>
+            <!-- 家具展示网格 -->
+            <div id="collection-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
+                <!-- 家具卡片（动态生成） -->
+            </div>
+            
+            <!-- 全收集奖励 -->
+            <div id="full-collection" class="text-center mt-12 hidden">
+                <h3 class="text-xl font-bold mb-4">恭喜！你已收集所有家具！</h3>
+                <div class="relative h-64">
+                    <!-- 幽灵将在这里动态生成 -->
+                </div>
+                <p class="text-gray-600 mt-4">你的小屋充满了万圣节的魔力，幽灵们也被吸引来了！</p>
+            </div>
+        </section>
+
+        <!-- 6. 小游戏页面 -->
+        <section id="games" class="page">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-2">小游戏</h2>
+                <p class="text-gray-500">完成游戏获取扭蛋和稀有家具</p>
+            </div>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white p-6 rounded-lg shadow-sm text-center">
+                    <div class="w-20 h-20 mx-auto mb-4 flex items-center justify-center bg-gray-100 rounded-full">
+                        <i class="fa fa-bolt text-gray-700 text-3xl"></i>
+                    </div>
+                    <h4 class="font-medium mb-2">游戏中心</h4>
+                    <p class="text-sm text-gray-500 mb-4">完成游戏获取扭蛋和稀有家具</p>
+                    <button id="game-enter" class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors">
+                        开始游戏
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部信息 -->
+    <footer class="bg-white py-6 border-t border-gray-200">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>© 2025 伊泽尔的万圣节扭蛋小屋 | 温馨治愈 · 创意空间构建</p>
+        </div>
+    </footer>
+
+    <!-- 游戏选择界面 -->
+    <div id="game-container" class="game-container">
+        <div id="game-close" class="text-2xl cursor-pointer">×</div>
+        <h2 class="game-title">选择游戏</h2>
+        <div class="game-description">选择一个游戏开始游玩，赢取扭蛋奖励！</div>
+        
+        <div id="game-selection">
+            <div class="game-option" data-game="memory">
+                <div class="game-icon">🧠</div>
+                <div class="game-info">
+                    <div class="game-title">记忆翻牌</div>
+                    <div class="game-reward">奖励: 3个扭蛋</div>
+                </div>
+            </div>
+            <div class="game-option" data-game="pumpkin">
+                <div class="game-icon">🎃</div>
+                <div class="game-info">
+                    <div class="game-title">南瓜接物</div>
+                    <div class="game-reward">奖励: 每10分1个扭蛋</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 记忆翻牌游戏 -->
+    <div id="memory-game-container" class="game-container">
+        <div id="memory-close" class="text-2xl cursor-pointer">×</div>
+        <h2 class="game-title">记忆翻牌</h2>
+        <div class="game-description">翻开卡片找到所有匹配的图案</div>
+        
+        <div id="memory-game"></div>
+        
+        <div class="game-controls">
+            <div id="memory-score">已匹配: 0/8</div>
+            <button id="memory-restart" class="game-button">重新开始</button>
+        </div>
+    </div>
+
+    <!-- 南瓜接物游戏 -->
+    <div id="pumpkin-game-container" class="game-container">
+        <div id="pumpkin-close" class="text-2xl cursor-pointer">×</div>
+        <h2 class="game-title">南瓜接物</h2>
+        <div class="game-description">用篮子接住掉落的南瓜</div>
+        
+        <div id="pumpkin-game">
+            <div id="pumpkin-basket"></div>
+        </div>
+        
+        <div class="game-controls">
+            <div id="pumpkin-score">得分: 0</div>
+            <button id="pumpkin-start" class="game-button">开始游戏</button>
+            <button id="pumpkin-restart" class="game-button">重新开始</button>
+        </div>
+        
+        <div id="pumpkin-instruction">使用左右方向键移动篮子</div>
+    </div>
+
+    <!-- 游戏结果弹窗 -->
+    <div id="game-result" class="game-result">
+        <h3 id="result-title">游戏结束</h3>
+        <div id="game-score">得分: 0</div>
+        <div id="game-reward">奖励: 0个扭蛋</div>
+        <button id="result-close" class="game-button">确定</button>
+    </div>
+
+    <!-- 获得物品弹窗 -->
+    <div id="reward-modal" class="reward-modal">
+        <div class="reward-content">
+            <div id="reward-icon" class="reward-icon"></div>
+            <div id="reward-title" class="reward-title">恭喜获得新物品！</div>
+            <div id="reward-name" class="reward-name"></div>
+            <div id="reward-description" class="reward-description"></div>
+            <button id="reward-close" class="reward-close">确定</button>
+        </div>
+    </div>
+
+    <!-- 图片上传确认弹窗 -->
+    <div id="upload-confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">确认上传</h3>
+            <p>你确定要使用这张图片作为家具吗？</p>
+            <p class="text-sm text-gray-500 mt-2">图片将被调整为320x320像素</p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn" class="modal-btn modal-confirm">确认</button>
+                <button id="modal-cancel-btn" class="modal-btn modal-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片大小超限提示弹窗 -->
+    <div id="file-size-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold mb-4">文件过大</h3>
+            <p>请选择小于2MB的图片文件</p>
+            <div class="modal-buttons">
+                <button id="size-modal-ok" class="modal-btn modal-confirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentTool = 'pen';
+        let brushSize = 1;
+        let brushColor = '#000000';
+        let isDrawing = false;
+        let currentShape = 'rectangle';
+        let stabilizerLevel = 3;
+        let currentSticker = null;
+        let selectedFurniture = null;
+        let currentAction = 'move';
+        let eggs = 10;
+        let furnitureCount = 0;
+        let stickerCount = 0;
+        let placedStickers = [];
+        let userFurniture = [];
+        let selectedFurnitureId = null;
+        let currentDrawingTheme = null;
+        let startX, startY; // 用于图形绘制的起始坐标
+        let canvasHistory = []; // 用于撤回功能的画布历史记录
+        let historyIndex = -1; // 当前历史记录索引
+
+        // 60个emoji家具数据
+        const furnitureData = [
+            // 万圣节风格
+            { id: 1, emoji: '🎃', name: '南瓜灯', description: '经典万圣节南瓜灯，夜晚会发出温暖的橙色光芒', style: '万圣节' },
+            { id: 2, emoji: '👻', name: '幽灵摆件', description: '漂浮的幽灵装饰，带有轻微的发光效果', style: '万圣节' },
+            { id: 3, emoji: '🕷️', name: '蜘蛛挂饰', description: '毛茸茸的蜘蛛装饰，增添万圣节气氛', style: '万圣节' },
+            { id: 4, emoji: '🦇', name: '蝙蝠壁灯', description: '造型独特的蝙蝠壁灯，光线柔和', style: '万圣节' },
+            { id: 5, emoji: '🕸️', name: '蛛网桌布', description: '精致的蜘蛛网图案桌布', style: '万圣节' },
+            { id: 6, emoji: '💀', name: '骷髅花瓶', description: '骷髅造型的花瓶，适合摆放干花', style: '万圣节' },
+            { id: 7, emoji: '☠️', name: '海盗旗挂毯', description: '带有骷髅标志的海盗旗装饰', style: '万圣节' },
+            { id: 8, emoji: '🧙', name: '巫师玩偶', description: '穿着黑袍的巫师玩偶，手持魔法杖', style: '万圣节' },
+            { id: 9, emoji: '🕯️', name: '南瓜蜡烛', description: '南瓜形状的香薰蜡烛，散发南瓜香味', style: '万圣节' },
+            { id: 10, emoji: '🍬', name: '糖果罐', description: '装满万圣节糖果的玻璃罐', style: '万圣节' },
+            { id: 11, emoji: '🍭', name: '棒棒糖坐垫', description: '巨大的棒棒糖造型坐垫，柔软舒适', style: '万圣节' },
+            { id: 12, emoji: '🔮', name: '水晶球', description: '神秘的水晶球，据说能预测未来', style: '万圣节' },
+            
+            // 森系风格
+            { id: 13, emoji: '🌲', name: '迷你圣诞树', description: '小型圣诞树盆栽，全年常绿', style: '森系' },
+            { id: 14, emoji: '🌿', name: '蕨类植物', description: '优雅的蕨类植物，适合放在书桌', style: '森系' },
+            { id: 15, emoji: '🍃', name: '叶片地毯', description: '叶片形状的柔软地毯', style: '森系' },
+            { id: 16, emoji: '🌳', name: '树桩小桌', description: '天然树桩制成的小桌子', style: '森系' },
+            { id: 17, emoji: '🍄', name: '蘑菇小灯', description: '蘑菇造型的小夜灯，光线柔和', style: '森系' },
+            { id: 18, emoji: '🐿️', name: '松鼠摆件', description: '可爱的松鼠造型装饰品', style: '森系' },
+            { id: 19, emoji: '🦔', name: '刺猬靠垫', description: '刺猬形状的靠垫，柔软舒适', style: '森系' },
+            { id: 20, emoji: '🌾', name: '麦穗挂饰', description: '天然麦穗制成的墙面挂饰', style: '森系' },
+            { id: 21, emoji: '🍂', name: '枫叶装饰画', description: '枫叶图案的装饰画', style: '森系' },
+            { id: 22, emoji: '🌵', name: '仙人掌盆栽', description: '易养护的仙人掌小盆栽', style: '森系' },
+            { id: 23, emoji: '🌼', name: '花朵地毯', description: '花朵图案的柔软地毯', style: '森系' },
+            { id: 24, emoji: '🦋', name: '蝴蝶窗帘', description: '带有蝴蝶图案的轻薄窗帘', style: '森系' },
+            
+            // 复古风格
+            { id: 25, emoji: '📻', name: '复古收音机', description: '老式收音机，能播放怀旧音乐', style: '复古' },
+            { id: 26, emoji: '📽️', name: '电影放映机', description: '老式电影放映机模型', style: '复古' },
+            { id: 27, emoji: '📞', name: '旋转拨号电话', description: '经典旋转拨号电话', style: '复古' },
+            { id: 28, emoji: '💽', name: '黑胶唱片机', description: '老式黑胶唱片机，带有怀旧感', style: '复古' },
+            { id: 29, emoji: '📚', name: '皮质书架', description: '复古皮质封面的书架', style: '复古' },
+            { id: 30, emoji: '🕰️', name: '座钟', description: '经典座钟，带有清脆的报时声', style: '复古' },
+            { id: 31, emoji: '⚙️', name: '齿轮装饰', description: '工业风齿轮装饰摆件', style: '复古' },
+            { id: 32, emoji: '🎞️', name: '胶片挂饰', description: '老式电影胶片制成的挂饰', style: '复古' },
+            { id: 33, emoji: '🔍', name: '铜制望远镜', description: '复古铜制望远镜摆件', style: '复古' },
+            { id: 34, emoji: '📜', name: '卷轴挂画', description: '可卷起的复古风格挂画', style: '复古' },
+            { id: 35, emoji: '🏺', name: '陶瓷花瓶', description: '复古风格陶瓷花瓶', style: '复古' },
+            { id: 36, emoji: '🚲', name: '自行车模型', description: '复古自行车精致模型', style: '复古' },
+            
+            // 现代风格
+            { id: 37, emoji: '💻', name: '笔记本电脑支架', description: '简约现代的笔记本电脑支架', style: '现代' },
+            { id: 38, emoji: '💡', name: 'LED台灯', description: '可调节亮度的现代LED台灯', style: '现代' },
+            { id: 39, emoji: '🔌', name: '无线充电器', description: '简约设计的无线充电器', style: '现代' },
+            { id: 40, emoji: '📱', name: '手机支架', description: '多角度调节的手机支架', style: '现代' },
+            { id: 41, emoji: '🎧', name: '耳机架', description: '时尚耳机架，节省桌面空间', style: '现代' },
+            { id: 42, emoji: '🖱️', name: '鼠标垫', description: '顺滑表面的现代风格鼠标垫', style: '现代' },
+            { id: 43, emoji: '📦', name: '收纳盒', description: '模块化设计的收纳盒', style: '现代' },
+            { id: 44, emoji: '🖼️', name: '简约画框', description: '无框设计的现代风格画框', style: '现代' },
+            { id: 45, emoji: '🧺', name: '编织篮', description: '简约设计的编织收纳篮', style: '现代' },
+            { id: 46, emoji: '💨', name: '桌面风扇', description: '静音设计的桌面小风扇', style: '现代' },
+            { id: 47, emoji: '🌡️', name: '温湿度计', description: '现代设计的温湿度计', style: '现代' },
+            { id: 48, emoji: '🔋', name: '充电宝', description: '轻薄便携的充电宝', style: '现代' },
+            
+            // 额外20个家具，平均分配到各风格
+            { id: 49, emoji: '🦉', name: '猫头鹰摆件', description: '万圣节主题猫头鹰装饰', style: '万圣节' },
+            { id: 50, emoji: '🍎', name: '毒苹果摆件', description: '童话风格的毒苹果装饰', style: '万圣节' },
+            { id: 51, emoji: '🧛', name: '吸血鬼玩偶', description: '万圣节吸血鬼造型玩偶', style: '万圣节' },
+            { id: 52, emoji: '🕸️', name: '蜘蛛抱枕', description: '蜘蛛造型的柔软抱枕', style: '万圣节' },
+            
+            { id: 53, emoji: '🐦', name: '小鸟喂食器', description: '吸引小鸟的悬挂式喂食器', style: '森系' },
+            { id: 54, emoji: '🌲', name: '松果装饰', description: '天然松果制成的装饰品', style: '森系' },
+            { id: 55, emoji: '🌊', name: '贝壳风铃', description: '海风一吹就发出悦耳声音', style: '森系' },
+            { id: 56, emoji: '🐢', name: '乌龟摆件', description: '象征长寿的乌龟装饰品', style: '森系' },
+            
+            { id: 57, emoji: '📖', name: '复古日记本', description: '皮质封面的复古日记本', style: '复古' },
+            { id: 58, emoji: '✒️', name: '羽毛笔套装', description: '复古羽毛笔和墨水瓶套装', style: '复古' },
+            { id: 59, emoji: '💰', name: '复古钱箱', description: '带有铜锁的复古钱箱', style: '复古' },
+            { id: 60, emoji: '🎭', name: '戏剧面具', description: '复古戏剧风格面具', style: '复古' },
+            
+            { id: 61, emoji: '📌', name: '磁性留言板', description: '现代设计的磁性留言板', style: '现代' },
+            { id: 62, emoji: '🗑️', name: '迷你垃圾桶', description: '简约设计的桌面垃圾桶', style: '现代' },
+            { id: 63, emoji: '🔖', name: '书签灯', description: '兼具书签功能的LED小灯', style: '现代' },
+            { id: 64, emoji: '🧼', name: '香薰机', description: '超声波香薰机，净化空气', style: '现代' },
+            
+            { id: 65, emoji: '🎃', name: '南瓜抱枕', description: '柔软的南瓜造型抱枕', style: '万圣节' },
+            { id: 66, emoji: '🌿', name: '悬挂植物', description: '可以悬挂的空气凤梨', style: '森系' },
+            { id: 67, emoji: '📽️', name: '复古幻灯机', description: '老式幻灯机模型', style: '复古' },
+            { id: 68, emoji: '💻', name: '电脑增高架', description: '带收纳功能的电脑增高架', style: '现代' },
+            { id: 69, emoji: '👻', name: '幽灵夜灯', description: '柔和发光的幽灵造型夜灯', style: '万圣节' },
+            { id: 70, emoji: '🦋', name: '蝴蝶标本框', description: '真实蝴蝶标本装饰框', style: '森系' }
+        ];
+
+        // DOM元素
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const pages = document.querySelectorAll('.page');
+        const toolBtns = document.querySelectorAll('.tool-btn');
+        const shapeSelector = document.getElementById('shape-selector');
+        const brushSizeInput = document.getElementById('brush-size');
+        const brushSizeValue = document.getElementById('brush-size-value');
+        const brushColorInput = document.getElementById('brush-color');
+        const colorPreview = document.getElementById('color-preview');
+        const stabilizerLevelInput = document.getElementById('stabilizer-level');
+        const stabilizerLevelValue = document.getElementById('stabilizer-value');
+        const clearCanvasBtn = document.getElementById('clear-canvas');
+        const undoBtn = document.getElementById('undo-btn');
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const submitDrawingBtn = document.getElementById('submit-drawing');
+        const imageUpload = document.getElementById('image-upload');
+        const uploadPreview = document.getElementById('upload-preview');
+        const uploadActions = document.getElementById('upload-actions');
+        const confirmUploadBtn = document.getElementById('confirm-upload');
+        const cancelUploadBtn = document.getElementById('cancel-upload');
+        const gachaBtn = document.getElementById('gacha-btn');
+        const waitingEgg = document.getElementById('waiting-egg');
+        const eggDropContainer = document.getElementById('egg-drop-container');
+        const droppingEgg = document.getElementById('dropping-egg');
+        const resultShow = document.getElementById('result-show');
+        const resultContent = document.getElementById('result-content');
+        const eggCountEl = document.getElementById('egg-count');
+        const furnitureCountEl = document.getElementById('furniture-count');
+        const stickerCountEl = document.getElementById('sticker-count');
+        const roomContainer = document.getElementById('room-container');
+        const furnitureContainer = document.getElementById('furniture-container');
+        const furnitureSelection = document.getElementById('furniture-selection');
+        const emptyFurniture = document.getElementById('empty-furniture');
+        const moveBtn = document.getElementById('move-btn');
+        const rotateBtn = document.getElementById('rotate-btn');
+        const scaleBtn = document.getElementById('scale-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const stickerItems = document.querySelectorAll('.sticker-item');
+        const collectionGrid = document.getElementById('collection-grid');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const musicControl = document.getElementById('music-control');
+        const backgroundMusic = document.getElementById('background-music');
+        const uploadConfirmModal = document.getElementById('upload-confirm-modal');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const fileSizeModal = document.getElementById('file-size-modal');
+        const sizeModalOk = document.getElementById('size-modal-ok');
+        const drawingTheme = document.getElementById('drawing-theme');
+        const drawingDesc = document.getElementById('drawing-desc');
+
+        // 获得物品弹窗相关元素
+        const rewardModal = document.getElementById('reward-modal');
+        const rewardIcon = document.getElementById('reward-icon');
+        const rewardTitle = document.getElementById('reward-title');
+        const rewardName = document.getElementById('reward-name');
+        const rewardDescription = document.getElementById('reward-description');
+        const rewardClose = document.getElementById('reward-close');
+
+        // 游戏相关DOM元素
+        const gameEnterBtn = document.getElementById('game-enter');
+        const gameContainer = document.getElementById('game-container');
+        const gameCloseBtn = document.getElementById('game-close');
+        const gameOptions = document.querySelectorAll('.game-option');
+        const memoryGameContainer = document.getElementById('memory-game-container');
+        const memoryCloseBtn = document.getElementById('memory-close');
+        const memoryGame = document.getElementById('memory-game');
+        const memoryRestartBtn = document.getElementById('memory-restart');
+        const memoryScoreEl = document.getElementById('memory-score');
+        const pumpkinGameContainer = document.getElementById('pumpkin-game-container');
+        const pumpkinCloseBtn = document.getElementById('pumpkin-close');
+        const pumpkinGame = document.getElementById('pumpkin-game');
+        const pumpkinStartBtn = document.getElementById('pumpkin-start');
+        const pumpkinRestartBtn = document.getElementById('pumpkin-restart');
+        const pumpkinScoreEl = document.getElementById('pumpkin-score');
+        const gameResult = document.getElementById('game-result');
+        const resultTitle = document.getElementById('result-title');
+        const gameScoreEl = document.getElementById('game-score');
+        const gameRewardEl = document.getElementById('game-reward');
+        const resultCloseBtn = document.getElementById('result-close');
+
+        // 游戏状态变量
+        let memoryCards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let pumpkinScore = 0;
+        let pumpkinGameActive = false;
+        let basketPosition = 150;
+        let fallingPumpkins = [];
+        let pumpkinInterval;
+
+        // 初始化
+        function init() {
+            // 初始化画布 - 设置为透明背景
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 初始化家具收藏
+            renderFurnitureCollection();
+            
+            // 从本地存储加载数据
+            loadData();
+            
+            // 更新计数显示
+            updateCounts();
+            
+            // 初始化游戏
+            initGames();
+            
+            // 初始化绘画工具
+            initDrawingTools();
+            
+            // 保存初始画布状态
+            saveCanvasState();
+        }
+
+        // 页面导航
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pageId = btn.getAttribute('data-page');
+                
+                // 更新导航按钮状态
+                navBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 更新页面显示
+                pages.forEach(page => {
+                    page.classList.remove('active');
+                    if (page.id === pageId) {
+                        page.classList.add('active');
+                    }
+                });
+            });
+        });
+
+        // 工具选择
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tool = btn.getAttribute('data-tool');
+                
+                // 更新工具按钮状态
+                toolBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 更新当前工具
+                currentTool = tool;
+                
+                // 显示/隐藏图形选择器
+                if (tool === 'shape') {
+                    shapeSelector.classList.remove('hidden');
+                } else {
+                    shapeSelector.classList.add('hidden');
+                }
+            });
+        });
+
+        // 图形选择
+        document.querySelectorAll('#shape-selector button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentShape = btn.getAttribute('data-shape');
+                
+                // 更新按钮状态
+                document.querySelectorAll('#shape-selector button').forEach(b => {
+                    b.classList.remove('bg-gray-200');
+                    b.classList.add('bg-white');
+                });
+                btn.classList.remove('bg-white');
+                btn.classList.add('bg-gray-200');
+            });
+        });
+
+        // 画笔大小调整
+        brushSizeInput.addEventListener('input', () => {
+            brushSize = parseInt(brushSizeInput.value);
+            brushSizeValue.textContent = `${brushSize}px`;
+        });
+
+        // 画笔颜色调整
+        brushColorInput.addEventListener('input', () => {
+            brushColor = brushColorInput.value;
+            colorPreview.style.backgroundColor = brushColor;
+        });
+
+        // 抖动修正调整
+        stabilizerLevelInput.addEventListener('input', () => {
+            stabilizerLevel = parseInt(stabilizerLevelInput.value);
+            stabilizerLevelValue.textContent = stabilizerLevel;
+        });
+
+        // 清空画布
+        clearCanvasBtn.addEventListener('click', () => {
+            if (confirm('确定要清空画布吗？')) {
+                // 使用透明背景清空画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                submitDrawingBtn.disabled = true;
+                saveCanvasState();
+            }
+        });
+
+        // 撤回功能
+        undoBtn.addEventListener('click', undoLastAction);
+
+        // 初始化绘画工具
+        function initDrawingTools() {
+            // 画布绘制功能
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // 触摸设备支持
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const x = e.touches[0].clientX - rect.left;
+                const y = e.touches[0].clientY - rect.top;
+                startDrawing({ offsetX: x, offsetY: y });
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const x = e.touches[0].clientX - rect.left;
+                const y = e.touches[0].clientY - rect.top;
+                draw({ offsetX: x, offsetY: y });
+            });
+            
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            
+            // 记录起始坐标（用于图形绘制）
+            startX = e.offsetX;
+            startY = e.offsetY;
+            
+            if (currentTool === 'pen' || currentTool === 'eraser') {
+                ctx.beginPath();
+                ctx.arc(e.offsetX, e.offsetY, brushSize / 2, 0, Math.PI * 2);
+                ctx.fillStyle = currentTool === 'eraser' ? 'rgba(0,0,0,0)' : brushColor;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            } else if (currentTool === 'bucket') {
+                // 油漆桶功能 - 填充区域
+                floodFill(e.offsetX, e.offsetY, brushColor);
+                saveCanvasState();
+            }
+            
+            submitDrawingBtn.disabled = false;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            if (currentTool === 'pen' || currentTool === 'eraser') {
+                ctx.lineWidth = brushSize;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = currentTool === 'eraser' ? 'rgba(0,0,0,0)' : brushColor;
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                
+                // 重新开始路径，避免线条过粗
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            
+            // 如果是图形工具，绘制最终图形
+            if (currentTool === 'shape' && startX !== undefined && startY !== undefined) {
+                const endX = event.offsetX;
+                const endY = event.offsetY;
+                
+                drawShape(startX, startY, endX, endY);
+                saveCanvasState();
+            } else if (currentTool === 'pen' || currentTool === 'eraser') {
+                // 保存画笔和橡皮擦操作后的状态
+                saveCanvasState();
+            }
+        }
+
+        // 绘制图形
+        function drawShape(startX, startY, endX, endY) {
+            ctx.beginPath();
+            
+            switch(currentShape) {
+                case 'rectangle':
+                    ctx.rect(startX, startY, endX - startX, endY - startY);
+                    break;
+                case 'circle':
+                    const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                    ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+                    break;
+                case 'triangle':
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(endX, endY);
+                    ctx.lineTo(startX * 2 - endX, endY);
+                    ctx.closePath();
+                    break;
+                case 'star':
+                    drawStar(ctx, startX, startY, 5, brushSize * 5, brushSize * 10);
+                    break;
+            }
+            
+            ctx.fillStyle = brushColor;
+            ctx.fill();
+        }
+
+        // 绘制星星
+        function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+        }
+
+        // 洪水填充算法（油漆桶）
+        function floodFill(startX, startY, fillColor) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+            const startPos = (Math.floor(startY) * canvas.width + Math.floor(startX)) * 4;
+            const startR = pixels[startPos];
+            const startG = pixels[startPos + 1];
+            const startB = pixels[startPos + 2];
+            const startA = pixels[startPos + 3];
+            
+            // 如果起始颜色和填充颜色相同，则不进行填充
+            const fillR = parseInt(fillColor.substr(1, 2), 16);
+            const fillG = parseInt(fillColor.substr(3, 2), 16);
+            const fillB = parseInt(fillColor.substr(5, 2), 16);
+            
+            if (startR === fillR && startG === fillG && startB === fillB) {
+                return;
+            }
+            
+            const stack = [[startX, startY]];
+            
+            while (stack.length) {
+                const [x, y] = stack.pop();
+                const pos = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                
+                // 检查边界和颜色匹配
+                if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) continue;
+                
+                const r = pixels[pos];
+                const g = pixels[pos + 1];
+                const b = pixels[pos + 2];
+                const a = pixels[pos + 3];
+                
+                if (r === startR && g === startG && b === startB && a === startA) {
+                    // 设置新颜色
+                    pixels[pos] = fillR;
+                    pixels[pos + 1] = fillG;
+                    pixels[pos + 2] = fillB;
+                    pixels[pos + 3] = 255; // 不透明
+                    
+                    // 添加相邻像素
+                    stack.push([x + 1, y]);
+                    stack.push([x - 1, y]);
+                    stack.push([x, y + 1]);
+                    stack.push([x, y - 1]);
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // 保存画布状态
+        function saveCanvasState() {
+            // 如果当前不是最新的状态，删除之后的状态
+            if (historyIndex < canvasHistory.length - 1) {
+                canvasHistory = canvasHistory.slice(0, historyIndex + 1);
+            }
+            
+            // 保存当前状态
+            canvasHistory.push(canvas.toDataURL());
+            historyIndex = canvasHistory.length - 1;
+            
+            // 限制历史记录数量
+            if (canvasHistory.length > 20) {
+                canvasHistory.shift();
+                historyIndex--;
+            }
+        }
+
+        // 撤回功能
+        function undoLastAction() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                };
+                img.src = canvasHistory[historyIndex];
+            } else if (historyIndex === 0) {
+                // 回到初始状态
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                historyIndex = -1;
+                canvasHistory = [];
+            }
+        }
+
+        // 提交绘制作品
+        submitDrawingBtn.addEventListener('click', () => {
+            // 将画布内容转换为图片
+            const imageData = canvas.toDataURL('image/png');
+            
+            // 创建新家具
+            const newFurniture = {
+                id: Date.now(),
+                type: 'drawing',
+                image: imageData,
+                name: `我的创作 ${userFurniture.length + 1}`,
+                description: '我亲手绘制的家具',
+                style: '自定义'
+            };
+            
+            // 添加到用户家具列表
+            userFurniture.push(newFurniture);
+            
+            // 更新显示
+            updateUserFurniture();
+            updateCounts();
+            saveData();
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            submitDrawingBtn.disabled = true;
+            
+            // 重置绘制主题
+            currentDrawingTheme = null;
+            drawingTheme.textContent = '请先抽取一个绘制主题';
+            drawingDesc.textContent = '';
+            
+            // 重置历史记录
+            canvasHistory = [];
+            historyIndex = -1;
+            saveCanvasState();
+            
+            alert('作品提交成功！已添加到你的家具库中');
+        });
+
+        // 图片上传功能
+        imageUpload.addEventListener('change', handleImageUpload);
+        
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            
+            // 检查文件大小（2MB）
+            if (file.size > 2 * 1024 * 1024) {
+                fileSizeModal.style.display = 'flex';
+                imageUpload.value = ''; // 清空选择
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                // 创建图片对象来检查尺寸
+                const img = new Image();
+                img.onload = function() {
+                    // 显示预览
+                    uploadPreview.src = event.target.result;
+                    uploadPreview.style.display = 'block';
+                    uploadActions.style.display = 'block';
+                };
+                img.src = event.target.result;
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // 图片大小超限弹窗
+        sizeModalOk.addEventListener('click', () => {
+            fileSizeModal.style.display = 'none';
+        });
+
+        // 确认上传
+        confirmUploadBtn.addEventListener('click', () => {
+            // 显示确认弹窗
+            uploadConfirmModal.style.display = 'flex';
+        });
+        
+        // 弹窗确认
+        modalConfirmBtn.addEventListener('click', () => {
+            // 创建新家具
+            const newFurniture = {
+                id: Date.now() + 1,
+                type: 'upload',
+                image: uploadPreview.src,
+                name: `上传的家具 ${userFurniture.filter(f => f.type === 'upload').length + 1}`,
+                description: '上传的图片家具',
+                style: '自定义'
+            };
+            
+            // 添加到用户家具列表
+            userFurniture.push(newFurniture);
+            
+            // 更新显示
+            updateUserFurniture();
+            updateCounts();
+            saveData();
+            
+            // 重置上传区域
+            resetUploadArea();
+            uploadConfirmModal.style.display = 'none';
+            
+            alert('图片上传成功！已添加到你的家具库中');
+        });
+        
+        // 弹窗取消
+        modalCancelBtn.addEventListener('click', () => {
+            uploadConfirmModal.style.display = 'none';
+        });
+
+        // 取消上传
+        cancelUploadBtn.addEventListener('click', resetUploadArea);
+        
+        function resetUploadArea() {
+            uploadPreview.src = '';
+            uploadPreview.style.display = 'none';
+            uploadActions.style.display = 'none';
+            imageUpload.value = '';
+        }
+
+        // 扭蛋功能
+        gachaBtn.addEventListener('click', startGacha);
+        waitingEgg.addEventListener('click', startGacha);
+
+        function startGacha() {
+            if (eggs <= 0) {
+                alert('你的扭蛋数量不足，请通过小游戏获取更多扭蛋');
+                return;
+            }
+            
+            // 消耗一个扭蛋
+            eggs--;
+            updateCounts();
+            
+            // 显示动画
+            waitingEgg.style.display = 'none';
+            eggDropContainer.classList.remove('hidden');
+            droppingEgg.classList.remove('open');
+            
+            // 动画结束后显示结果
+            setTimeout(() => {
+                droppingEgg.classList.add('open');
+                
+                setTimeout(() => {
+                    eggDropContainer.classList.add('hidden');
+                    resultShow.classList.remove('hidden');
+                    
+                    // 随机获取一个家具或贴纸
+                    const isSticker = Math.random() > 0.7; // 30%概率获得贴纸
+                    
+                    if (isSticker) {
+                        // 随机选择一个贴纸
+                        const stickers = ['🎃', '👻', '🕷️', '🦇', '🕸️', '🍬', '🍭', '🧙', '🕯️', '☠️', '💀', '🔮'];
+                        const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+                        
+                        resultContent.innerHTML = `<span style="font-size: 48px;">${randomSticker}</span>`;
+                        
+                        // 添加贴纸
+                        stickerCount++;
+                        placedStickers.push({
+                            id: Date.now(),
+                            content: randomSticker,
+                            x: window.innerWidth / 2,
+                            y: window.innerHeight / 2,
+                            rotation: 0,
+                            scale: 1
+                        });
+                        
+                        // 显示获得物品弹窗
+                        showRewardModal('贴纸', randomSticker, '可以在页面上任意放置的装饰贴纸');
+                    } else {
+                        // 随机选择一个家具
+                        const randomFurniture = furnitureData[Math.floor(Math.random() * furnitureData.length)];
+                        
+                        // 检查是否已经拥有
+                        const alreadyHave = userFurniture.some(f => f.id === randomFurniture.id);
+                        
+                        resultContent.innerHTML = `<span style="font-size: 48px;">${randomFurniture.emoji}</span>`;
+                        
+                        // 如果没有，添加到用户家具
+                        if (!alreadyHave) {
+                            userFurniture.push({...randomFurniture, type: 'gacha'});
+                            furnitureCount++;
+                            updateUserFurniture();
+                            
+                            // 显示获得物品弹窗
+                            showRewardModal('家具', randomFurniture.emoji, randomFurniture.name, randomFurniture.description);
+                            
+                            // 设置绘制主题
+                            currentDrawingTheme = randomFurniture;
+                            drawingTheme.textContent = `绘制主题: ${randomFurniture.name}`;
+                            drawingDesc.textContent = `描述: ${randomFurniture.description}`;
+                        } else {
+                            // 已经拥有，奖励扭蛋
+                            eggs += 2;
+                            setTimeout(() => {
+                                alert('你已经拥有这个家具了，获得2个扭蛋作为补偿！');
+                            }, 1000);
+                        }
+                    }
+                    
+                    updateCounts();
+                    saveData();
+                    
+                    // 3秒后重置
+                    setTimeout(() => {
+                        resultShow.classList.add('hidden');
+                        waitingEgg.style.display = 'flex';
+                    }, 3000);
+                }, 500);
+            }, 1000);
+        }
+
+        // 显示获得物品弹窗
+        function showRewardModal(type, icon, name, description = '') {
+            rewardIcon.textContent = icon;
+            rewardTitle.textContent = `恭喜获得新${type}！`;
+            rewardName.textContent = name;
+            rewardDescription.textContent = description;
+            rewardModal.style.display = 'flex';
+        }
+
+        // 关闭获得物品弹窗
+        rewardClose.addEventListener('click', () => {
+            rewardModal.style.display = 'none';
+        });
+
+        // 更新计数显示
+        function updateCounts() {
+            eggCountEl.textContent = eggs;
+            furnitureCountEl.textContent = `${furnitureCount}/70`;
+            stickerCountEl.textContent = stickerCount;
+        }
+
+        // 更新用户家具显示
+        function updateUserFurniture() {
+            furnitureSelection.innerHTML = '';
+            
+            if (userFurniture.length === 0) {
+                emptyFurniture.style.display = 'block';
+                return;
+            }
+            
+            emptyFurniture.style.display = 'none';
+            
+            userFurniture.forEach(furniture => {
+                const furnitureEl = document.createElement('div');
+                furnitureEl.className = 'bg-white rounded-lg p-3 text-center cursor-pointer hover:shadow-md transition-shadow';
+                furnitureEl.setAttribute('data-id', furniture.id);
+                
+                if (furniture.type === 'gacha') {
+                    furnitureEl.innerHTML = `
+                        <div style="font-size: 32px;">${furniture.emoji}</div>
+                        <p class="text-sm mt-1">${furniture.name}</p>
+                    `;
+                } else {
+                    furnitureEl.innerHTML = `
+                        <img src="${furniture.image}" alt="${furniture.name}" class="w-16 h-16 mx-auto object-contain">
+                        <p class="text-sm mt-1">${furniture.name}</p>
+                    `;
+                }
+                
+                furnitureEl.addEventListener('click', () => {
+                    addFurnitureToRoom(furniture);
+                });
+                
+                furnitureSelection.appendChild(furnitureEl);
+            });
+        }
+
+        // 添加家具到房间
+        function addFurnitureToRoom(furniture) {
+            const furnitureEl = document.createElement('div');
+            furnitureEl.className = 'room-furniture';
+            furnitureEl.style.width = '80px';
+            furnitureEl.style.height = '80px';
+            furnitureEl.style.left = '50%';
+            furnitureEl.style.top = '50%';
+            furnitureEl.setAttribute('data-id', furniture.id);
+            
+            if (furniture.type === 'gacha') {
+                furnitureEl.innerHTML = `<div style="font-size: 48px;">${furniture.emoji}</div>`;
+            } else {
+                furnitureEl.innerHTML = `<img src="${furniture.image}" alt="${furniture.name}" class="furniture-image">`;
+            }
+            
+            furnitureContainer.appendChild(furnitureEl);
+            
+            // 添加拖动功能
+            makeDraggable(furnitureEl);
+        }
+
+        // 使元素可拖动
+        function makeDraggable(element) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            element.onmousedown = dragMouseDown;
+            
+            function dragMouseDown(e) {
+                e.preventDefault();
+                
+                // 如果是删除模式，直接删除
+                if (currentAction === 'delete') {
+                    element.remove();
+                    return;
+                }
+                
+                // 如果是旋转模式
+                if (currentAction === 'rotate') {
+                    const currentRotation = getRotationDegrees(element);
+                    element.style.transform = `rotate(${currentRotation + 45}deg)`;
+                    return;
+                }
+                
+                // 如果是缩放模式
+                if (currentAction === 'scale') {
+                    const currentScale = getScale(element);
+                    const newScale = currentScale + 0.1;
+                    element.style.transform = `scale(${newScale}) rotate(${getRotationDegrees(element)}deg)`;
+                    return;
+                }
+                
+                // 移动模式
+                selectedFurniture = element;
+                
+                // 获取鼠标初始位置
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+            
+            function elementDrag(e) {
+                e.preventDefault();
+                
+                // 计算新的位置
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                
+                // 设置元素新的位置
+                const newTop = (element.offsetTop - pos2) + 'px';
+                const newLeft = (element.offsetLeft - pos1) + 'px';
+                
+                // 限制在房间内
+                const roomRect = roomContainer.getBoundingClientRect();
+                const elemRect = element.getBoundingClientRect();
+                
+                if (parseInt(newTop) >= 0 && 
+                    parseInt(newTop) + elemRect.height <= roomRect.height &&
+                    parseInt(newLeft) >= 0 && 
+                    parseInt(newLeft) + elemRect.width <= roomRect.width) {
+                    
+                    element.style.top = newTop;
+                    element.style.left = newLeft;
+                }
+            }
+            
+            function closeDragElement() {
+                // 停止移动
+                document.onmouseup = null;
+                document.onmousemove = null;
+                selectedFurniture = null;
+            }
+        }
+
+        // 获取元素旋转角度
+        function getRotationDegrees(obj) {
+            const style = window.getComputedStyle(obj);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            const angle = Math.round(Math.atan2(matrix.m21, matrix.m11) * (180 / Math.PI));
+            return (angle < 0) ? angle + 360 : angle;
+        }
+
+        // 获取元素缩放比例
+        function getScale(obj) {
+            const style = window.getComputedStyle(obj);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            return Math.sqrt(matrix.m11 * matrix.m11 + matrix.m21 * matrix.m21);
+        }
+
+        // 房间操作按钮
+        moveBtn.addEventListener('click', () => setAction('move'));
+        rotateBtn.addEventListener('click', () => setAction('rotate'));
+        scaleBtn.addEventListener('click', () => setAction('scale'));
+        deleteBtn.addEventListener('click', () => setAction('delete'));
+
+        function setAction(action) {
+            currentAction = action;
+            
+            // 更新按钮状态
+            moveBtn.classList.remove('active');
+            rotateBtn.classList.remove('active');
+            scaleBtn.classList.remove('active');
+            deleteBtn.classList.remove('active');
+            
+            document.querySelector(`#${action}-btn`).classList.add('active');
+        }
+
+        // 贴纸功能
+        stickerItems.forEach(item => {
+            item.addEventListener('click', () => {
+                currentSticker = item.getAttribute('data-sticker');
+                
+                // 更新选中状态
+                stickerItems.forEach(i => i.classList.remove('bg-gray-200'));
+                item.classList.add('bg-gray-200');
+                
+                // 提示用户点击放置
+                alert(`已选择 ${currentSticker}，请在页面任意位置点击放置`);
+                
+                // 添加点击放置事件
+                document.addEventListener('click', placeSticker);
+            });
+        });
+
+        function placeSticker(e) {
+            // 忽略贴纸选择区域的点击
+            if (e.target.closest('#sticker-collection')) return;
+            
+            if (currentSticker) {
+                // 创建新贴纸
+                const sticker = document.createElement('div');
+                sticker.className = 'sticker';
+                sticker.textContent = currentSticker;
+                sticker.style.left = `${e.clientX}px`;
+                sticker.style.top = `${e.clientY}px`;
+                sticker.setAttribute('data-id', Date.now());
+                
+                // 添加到页面
+                document.body.appendChild(sticker);
+                
+                // 记录贴纸
+                stickerCount++;
+                placedStickers.push({
+                    id: parseInt(sticker.getAttribute('data-id')),
+                    content: currentSticker,
+                    x: e.clientX,
+                    y: e.clientY,
+                    rotation: 0,
+                    scale: 1
+                });
+                
+                // 更新计数
+                updateCounts();
+                saveData();
+                
+                // 使贴纸可拖动
+                makeStickerDraggable(sticker);
+                
+                // 移除事件监听
+                document.removeEventListener('click', placeSticker);
+                currentSticker = null;
+                
+                // 重置选中状态
+                stickerItems.forEach(i => i.classList.remove('bg-gray-200'));
+            }
+        }
+
+        // 使贴纸可拖动
+        function makeStickerDraggable(sticker) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            let isDragging = false;
+            
+            sticker.onmousedown = dragStart;
+            sticker.ondblclick = () => {
+                sticker.remove();
+                // 从数组中移除
+                placedStickers = placedStickers.filter(s => s.id !== parseInt(sticker.getAttribute('data-id')));
+                stickerCount--;
+                updateCounts();
+                saveData();
+            };
+            
+            function dragStart(e) {
+                e.preventDefault();
+                isDragging = true;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = dragEnd;
+                document.onmousemove = dragMove;
+            }
+            
+            function dragMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                
+                // 更新位置
+                sticker.style.top = (sticker.offsetTop - pos2) + "px";
+                sticker.style.left = (sticker.offsetLeft - pos1) + "px";
+                
+                // 更新数组中的位置
+                const index = placedStickers.findIndex(s => s.id === parseInt(sticker.getAttribute('data-id')));
+                if (index !== -1) {
+                    placedStickers[index].x = sticker.offsetLeft - pos1;
+                    placedStickers[index].y = sticker.offsetTop - pos2;
+                }
+            }
+            
+            function dragEnd() {
+                isDragging = false;
+                document.onmouseup = null;
+                document.onmousemove = null;
+                saveData();
+            }
+        }
+
+        // 渲染家具收藏
+        function renderFurnitureCollection() {
+            collectionGrid.innerHTML = '';
+            
+            furnitureData.forEach(furniture => {
+                const isOwned = userFurniture.some(f => f.id === furniture.id);
+                
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-lg shadow-sm p-3 furniture-card ${isOwned ? '' : 'opacity-50'}`;
+                card.setAttribute('data-style', furniture.style);
+                
+                card.innerHTML = `
+                    <div style="font-size: 48px; text-align: center; height: 60px;">${furniture.emoji}</div>
+                    <h4 class="font-medium mt-2">${furniture.name}</h4>
+                    <p class="text-xs text-gray-500 mt-1">${furniture.description}</p>
+                    ${!isOwned ? '<div class="absolute top-2 right-2 text-xs bg-gray-200 px-1 rounded">未拥有</div>' : ''}
+                `;
+                
+                collectionGrid.appendChild(card);
+            });
+        }
+
+        // 家具筛选
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.getAttribute('data-filter');
+                
+                // 更新按钮状态
+                filterBtns.forEach(b => {
+                    b.classList.remove('bg-gray-700', 'text-white');
+                    b.classList.add('bg-white', 'border', 'border-gray-300', 'hover:bg-gray-50');
+                });
+                btn.classList.remove('bg-white', 'border', 'border-gray-300', 'hover:bg-gray-50');
+                btn.classList.add('bg-gray-700', 'text-white');
+                
+                // 筛选家具
+                const cards = document.querySelectorAll('.furniture-card');
+                cards.forEach(card => {
+                    if (filter === 'all' || card.getAttribute('data-style') === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // 音乐控制
+        musicControl.addEventListener('click', () => {
+            if (backgroundMusic.paused) {
+                backgroundMusic.play().catch(e => {
+                    console.log('音乐播放失败:', e);
+                });
+                musicControl.innerHTML = '<i class="fa fa-pause"></i>';
+            } else {
+                backgroundMusic.pause();
+                musicControl.innerHTML = '<i class="fa fa-music"></i>';
+            }
+        });
+
+        // 游戏初始化
+        function initGames() {
+            // 游戏入口按钮
+            gameEnterBtn.addEventListener('click', () => {
+                gameContainer.style.display = 'flex';
+            });
+            
+            // 游戏关闭按钮
+            gameCloseBtn.addEventListener('click', () => {
+                gameContainer.style.display = 'none';
+            });
+            
+            // 游戏选择
+            gameOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const gameType = option.getAttribute('data-game');
+                    gameContainer.style.display = 'none';
+                    
+                    if (gameType === 'memory') {
+                        startMemoryGame();
+                    } else if (gameType === 'pumpkin') {
+                        startPumpkinGame();
+                    }
+                });
+            });
+            
+            // 记忆游戏关闭按钮
+            memoryCloseBtn.addEventListener('click', () => {
+                memoryGameContainer.style.display = 'none';
+            });
+            
+            // 南瓜游戏关闭按钮
+            pumpkinCloseBtn.addEventListener('click', () => {
+                pumpkinGameContainer.style.display = 'none';
+                stopPumpkinGame();
+            });
+            
+            // 游戏结果关闭按钮
+            resultCloseBtn.addEventListener('click', () => {
+                gameResult.style.display = 'none';
+            });
+        }
+
+        // 记忆翻牌游戏
+        function startMemoryGame() {
+            memoryGameContainer.style.display = 'flex';
+            memoryGame.innerHTML = '';
+            flippedCards = [];
+            matchedPairs = 0;
+            memoryScoreEl.textContent = '已匹配: 0/8';
+            
+            // 创建卡片
+            const symbols = ['🎃', '👻', '🦇', '🕷️', '🍬', '🍭', '🕸️', '🔮'];
+            memoryCards = [...symbols, ...symbols];
+            
+            // 随机排序
+            memoryCards.sort(() => Math.random() - 0.5);
+            
+            // 创建卡片元素
+            memoryCards.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.className = 'memory-card';
+                card.innerHTML = `
+                    <div class="front">${symbol}</div>
+                    <div class="back">?</div>
+                `;
+                card.addEventListener('click', () => flipCard(card, symbol, index));
+                memoryGame.appendChild(card);
+            });
+            
+            // 重新开始按钮
+            memoryRestartBtn.addEventListener('click', startMemoryGame);
+        }
+
+        function flipCard(card, symbol, index) {
+            // 如果卡片已经翻开或匹配，或者已经翻开了两张卡片，则返回
+            if (card.classList.contains('flipped') || flippedCards.length === 2) {
+                return;
+            }
+            
+            // 翻开卡片
+            card.classList.add('flipped');
+            flippedCards.push({ card, symbol, index });
+            
+            // 如果翻开了两张卡片，检查是否匹配
+            if (flippedCards.length === 2) {
+                const [card1, card2] = flippedCards;
+                
+                if (card1.symbol === card2.symbol) {
+                    // 匹配成功
+                    matchedPairs++;
+                    memoryScoreEl.textContent = `已匹配: ${matchedPairs}/8`;
+                    flippedCards = [];
+                    
+                    // 检查游戏是否完成
+                    if (matchedPairs === 8) {
+                        setTimeout(() => {
+                            endMemoryGame();
+                        }, 500);
+                    }
+                } else {
+                    // 不匹配，翻回卡片
+                    setTimeout(() => {
+                        card1.card.classList.remove('flipped');
+                        card2.card.classList.remove('flipped');
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+        }
+
+        function endMemoryGame() {
+            memoryGameContainer.style.display = 'none';
+            
+            // 计算奖励
+            const reward = 3;
+            eggs += reward;
+            updateCounts();
+            saveData();
+            
+            // 显示结果
+            resultTitle.textContent = '恭喜！游戏完成！';
+            gameScoreEl.textContent = '得分: 8/8';
+            gameRewardEl.textContent = `奖励: ${reward}个扭蛋`;
+            gameResult.style.display = 'flex';
+        }
+
+        // 南瓜接物游戏
+        function startPumpkinGame() {
+            pumpkinGameContainer.style.display = 'flex';
+            pumpkinScore = 0;
+            pumpkinScoreEl.textContent = '得分: 0';
+            fallingPumpkins = [];
+            basketPosition = 150;
+            updateBasketPosition();
+            
+            // 开始按钮
+            pumpkinStartBtn.addEventListener('click', startPumpkinFall);
+            
+            // 重新开始按钮
+            pumpkinRestartBtn.addEventListener('click', () => {
+                stopPumpkinGame();
+                startPumpkinGame();
+            });
+            
+            // 键盘控制
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function startPumpkinFall() {
+            pumpkinGameActive = true;
+            pumpkinStartBtn.disabled = true;
+            
+            // 创建南瓜
+            pumpkinInterval = setInterval(() => {
+                if (!pumpkinGameActive) return;
+                
+                const pumpkin = document.createElement('div');
+                pumpkin.className = 'falling-pumpkin';
+                pumpkin.textContent = '🎃';
+                pumpkin.style.left = `${Math.random() * 260 + 20}px`;
+                pumpkin.style.animationDuration = `${Math.random() * 2 + 2}s`;
+                
+                pumpkinGame.appendChild(pumpkin);
+                fallingPumpkins.push(pumpkin);
+                
+                // 检查碰撞
+                const checkInterval = setInterval(() => {
+                    if (!pumpkinGameActive) {
+                        clearInterval(checkInterval);
+                        return;
+                    }
+                    
+                    const pumpkinRect = pumpkin.getBoundingClientRect();
+                    const basketRect = document.getElementById('pumpkin-basket').getBoundingClientRect();
+                    
+                    // 检查碰撞
+                    if (
+                        pumpkinRect.bottom >= basketRect.top &&
+                        pumpkinRect.left >= basketRect.left &&
+                        pumpkinRect.right <= basketRect.right
+                    ) {
+                        // 接住南瓜
+                        pumpkin.remove();
+                        fallingPumpkins = fallingPumpkins.filter(p => p !== pumpkin);
+                        pumpkinScore++;
+                        pumpkinScoreEl.textContent = `得分: ${pumpkinScore}`;
+                        clearInterval(checkInterval);
+                    } else if (pumpkinRect.bottom >= pumpkinGame.getBoundingClientRect().bottom) {
+                        // 南瓜落地
+                        pumpkin.remove();
+                        fallingPumpkins = fallingPumpkins.filter(p => p !== pumpkin);
+                        clearInterval(checkInterval);
+                        
+                        // 游戏结束
+                        if (pumpkinGameActive) {
+                            endPumpkinGame();
+                        }
+                    }
+                }, 50);
+                
+                // 5秒后移除南瓜（如果还没被接住或落地）
+                setTimeout(() => {
+                    if (pumpkin.parentNode) {
+                        pumpkin.remove();
+                        fallingPumpkins = fallingPumpkins.filter(p => p !== pumpkin);
+                    }
+                }, 5000);
+            }, 1000);
+        }
+
+        function stopPumpkinGame() {
+            pumpkinGameActive = false;
+            clearInterval(pumpkinInterval);
+            
+            // 移除所有南瓜
+            fallingPumpkins.forEach(pumpkin => {
+                if (pumpkin.parentNode) {
+                    pumpkin.remove();
+                }
+            });
+            fallingPumpkins = [];
+            
+            // 移除事件监听
+            document.removeEventListener('keydown', handleKeyPress);
+        }
+
+        function handleKeyPress(e) {
+            if (!pumpkinGameActive) return;
+            
+            if (e.key === 'ArrowLeft') {
+                basketPosition = Math.max(0, basketPosition - 20);
+                updateBasketPosition();
+            } else if (e.key === 'ArrowRight') {
+                basketPosition = Math.min(280, basketPosition + 20);
+                updateBasketPosition();
+            }
+        }
+
+        function updateBasketPosition() {
+            document.getElementById('pumpkin-basket').style.left = `${basketPosition}px`;
+        }
+
+        function endPumpkinGame() {
+            stopPumpkinGame();
+            pumpkinGameContainer.style.display = 'none';
+            
+            // 计算奖励
+            const reward = Math.floor(pumpkinScore / 10);
+            eggs += reward;
+            updateCounts();
+            saveData();
+            
+            // 显示结果
+            resultTitle.textContent = '游戏结束！';
+            gameScoreEl.textContent = `得分: ${pumpkinScore}`;
+            gameRewardEl.textContent = `奖励: ${reward}个扭蛋`;
+            gameResult.style.display = 'flex';
+        }
+
+        // 数据存储功能
+        function saveData() {
+            const data = {
+                eggs,
+                furnitureCount,
+                stickerCount,
+                userFurniture,
+                placedStickers
+            };
+            
+            localStorage.setItem('halloweenCabinData', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const savedData = localStorage.getItem('halloweenCabinData');
+            
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                
+                eggs = data.eggs || 10;
+                furnitureCount = data.furnitureCount || 0;
+                stickerCount = data.stickerCount || 0;
+                userFurniture = data.userFurniture || [];
+                placedStickers = data.placedStickers || [];
+                
+                // 恢复放置的贴纸
+                placedStickers.forEach(sticker => {
+                    const stickerEl = document.createElement('div');
+                    stickerEl.className = 'sticker';
+                    stickerEl.textContent = sticker.content;
+                    stickerEl.style.left = `${sticker.x}px`;
+                    stickerEl.style.top = `${sticker.y}px`;
+                    stickerEl.style.transform = `rotate(${sticker.rotation}deg) scale(${sticker.scale})`;
+                    stickerEl.setAttribute('data-id', sticker.id);
+                    
+                    document.body.appendChild(stickerEl);
+                    makeStickerDraggable(stickerEl);
+                });
+                
+                // 更新用户家具显示
+                updateUserFurniture();
+            }
+        }
+
+        // 初始化应用
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
